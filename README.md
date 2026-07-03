@@ -32,6 +32,11 @@ Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_c
 
 Use forward slashes in `args`, even on Windows.
 
+
+## Project Instructions (Claude Projects)
+
+If you use Claude Projects (or any tool with a "system instructions" / "custom instructions" field), copy the content of [`PROJECT_INSTRUCTIONS.md`](./PROJECT_INSTRUCTIONS.md) into that field. It tells Claude to use the CodersMCP tools for this project instead of generic file/shell tools, plus a set of workflow and formatting rules (tool call budget, read-before-write, no unsolicited refactors, etc).
+
 ## Setup
 
 ```bash
