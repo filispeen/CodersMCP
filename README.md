@@ -16,7 +16,7 @@ Runs alongside a `codegraph` MCP server, both registered in `claude_desktop_conf
 
 ## Installation
 
-Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json`):
+Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json` or `%appdata%\..\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`):
 
 ```json
 {
