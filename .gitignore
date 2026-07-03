@@ -1,0 +1,8 @@
+node_modules/
+.CodersMCP/
+*.log
+err.txt
+out.txt
+_smoke_test.txt
+.env
+npm-debug.log*
