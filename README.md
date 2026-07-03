@@ -70,7 +70,7 @@ This same byte-level care matters for Cyrillic and other multi-byte UTF-8 conten
 
 ## Stack
 
-ESM Node.js project using `@modelcontextprotocol/sdk`, `better-sqlite3` (loaded via `createRequire` for ESM compatibility), `ignore`, `minimatch`.
+ESM Node.js project using `@modelcontextprotocol/sdk`
 
 ## License
 
