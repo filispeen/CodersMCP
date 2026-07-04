@@ -13,6 +13,7 @@ Runs alongside a `codegraph` MCP server, both registered in `claude_desktop_conf
 - `graph_index` - index a project directory for symbol and function lookup, stored in `.CodersMCP/index.db`
 - `graph_explore` - fuzzy symbol name search across the index
 - `run` - execute a shell command with timeout (PowerShell on Windows, `/bin/sh` elsewhere)
+- `web_fetch` - fetch a static HTML/documentation page and return its content as Markdown (no JS execution, no SPA support)
 
 ## Installation
 
