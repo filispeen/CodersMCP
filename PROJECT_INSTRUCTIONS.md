@@ -1,6 +1,6 @@
 # Environment
 
-Work at `F:\Code\nodejs\CodersMCP` using Windows MCP and codegraph (MCP).
+Work at `F:\Code\nodejs\CodersMCP` using CodersMCP.
 
 # Rules
 
@@ -77,9 +77,8 @@ Rules for this session:
 8. Be fully concise
 9. When editing files -> only "Done" + next step
 10. When reading files -> only "Now I understand context."
-11. Always respond in caveman mode (ultra level) when writing code/review/PR. ()
-12. Do NOT use em dashes in code
-13. If you're using web search and resource is not available for you, ask user if you can use windowsMCP scrape.
+11. Do NOT use em dashes in code
+12. If you're using web search and resource is not available for you, use CodersMCP scrape.
 </answering_rules>
 
 <example>

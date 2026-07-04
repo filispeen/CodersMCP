@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { fsRead, fsWrite, fsReplace, fsSearch } from './src/fs.js';
 import { graphIndex, graphExplore } from './src/graph.js';
 import { run } from './src/run.js';
+import { webFetch } from './src/scrape.js';
 
 const server = new McpServer({ name: 'CodersMCP', version: '1.0.0' });
 
@@ -91,6 +92,16 @@ server.tool(
     timeout: z.number().optional().describe('Timeout in seconds (default 30, max 120)'),
   },
   toolWrap(run, true)
+);
+
+server.tool(
+  'web_fetch',
+  'Fetch a static HTML/documentation page and return its content as Markdown. Does not execute JavaScript (no SPA support).',
+  {
+    url: z.string().describe('The URL to fetch'),
+    timeout_ms: z.number().optional().describe('Request timeout in milliseconds (default 10000)'),
+  },
+  toolWrap(webFetch, true)
 );
 
 const transport = new StdioServerTransport();
