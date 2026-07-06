@@ -37,7 +37,24 @@ export async function webFetch({ url, timeout_ms }) {
     throw new Error(`HTTP error for ${url}: ${response.status} ${response.statusText}`);
   }
 
-  const html = await response.text();
-  const content = turndown.turndown(html);
-  return { url, content };
+  const contentType = response.headers.get('content-type') || '';
+  const isHtmlLike = /text\/html|application\/xhtml/i.test(contentType) || contentType === '';
+
+  const buf = await response.arrayBuffer();
+  const charsetMatch = contentType.match(/charset=([^;]+)/i);
+  let charset = charsetMatch ? charsetMatch[1].trim().toLowerCase() : 'utf-8';
+
+  let body;
+  try {
+    body = new TextDecoder(charset).decode(buf);
+  } catch (_) {
+    body = new TextDecoder('utf-8').decode(buf);
+  }
+
+  if (!isHtmlLike) {
+    return { url, content: body, content_type: contentType, note: 'Non-HTML content type, returned as-is without markdown conversion.' };
+  }
+
+  const content = turndown.turndown(body);
+  return { url, content, content_type: contentType };
 }

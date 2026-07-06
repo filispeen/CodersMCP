@@ -32,10 +32,11 @@ server.tool(
 
 server.tool(
   'fs_write',
-  'Write content to a file, normalizing line endings to LF',
+  'Write content to a file. Preserves the existing file line endings by default (CRLF/LF), or override via line_endings',
   {
     path: z.string().describe('Absolute file path'),
     content: z.string().describe('File content to write'),
+    line_endings: z.enum(['preserve', 'lf', 'crlf']).optional().describe('Line ending mode (default "preserve")'),
   },
   toolWrap(fsWrite)
 );
@@ -53,7 +54,7 @@ server.tool(
 
 server.tool(
   'fs_search',
-  'Recursively search files for a pattern string or regex',
+  'Recursively search files for a pattern string or regex. Skips files over 2MB and binary files, caps results at 500 matches (see "truncated" in response)',
   {
     path: z.string().describe('Root directory to search'),
     pattern: z.string().describe('Search pattern or regex'),

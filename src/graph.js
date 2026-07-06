@@ -1,14 +1,13 @@
 import { mkdirSync, existsSync } from 'fs';
-import { readdirSync, statSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
 import path from 'path';
+import { walkDir } from './walk.js';
 
 const require = createRequire(import.meta.url);
 const Database = require('better-sqlite3');
 
 const SOURCE_EXTS = new Set(['.js', '.ts', '.jsx', '.tsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.java', '.cs', '.cpp', '.c', '.h', '.hpp', '.rb', '.php', '.swift', '.kt', '.scala', '.lua', '.ex', '.exs', '.hs', '.clj', '.ml', '.fs', '.fsx']);
-const SKIP_DIRS = new Set(['node_modules', '__pycache__', '.git', 'dist', 'build', '.next', '.nuxt', 'coverage', '.venv', 'venv', 'target', 'out', '.CodersMCP']);
 
 function getDb(projectPath) {
   const dbDir = path.join(projectPath, '.CodersMCP');
@@ -29,19 +28,10 @@ function getDb(projectPath) {
 }
 
 function walkSrc(root, files) {
-  let entries;
-  try { entries = readdirSync(root); } catch (_) { return; }
-  for (const entry of entries) {
-    if (SKIP_DIRS.has(entry)) continue;
-    const full = path.join(root, entry);
-    let stat;
-    try { stat = statSync(full); } catch (_) { continue; }
-    if (stat.isDirectory()) walkSrc(full, files);
-    else if (stat.isFile()) {
-      const ext = path.extname(entry).toLowerCase();
-      if (SOURCE_EXTS.has(ext)) files.push(full);
-    }
-  }
+  walkDir(root, (full, entry) => {
+    const ext = path.extname(entry).toLowerCase();
+    if (SOURCE_EXTS.has(ext)) files.push(full);
+  });
 }
 
 const PATTERNS = [
@@ -65,10 +55,24 @@ function extractSymbols(filePath) {
   const found = [];
   const seen = new Set();
 
+  const looksLikeSignatureStart = (l) => {
+    const t = l.trim();
+    if (!t) return false;
+    if (/=>\s*\{?\s*$/.test(t)) return false;
+    const opens = (t.match(/\(/g) || []).length;
+    const closes = (t.match(/\)/g) || []).length;
+    return opens > closes;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const needsJoin = looksLikeSignatureStart(line);
     for (const { regex, type } of PATTERNS) {
-      const m = line.match(regex);
+      let m = line.match(regex);
+      if (!m && needsJoin) {
+        const joined = lines.slice(i, i + 8).join(' ');
+        m = joined.match(regex);
+      }
       if (m && m[1]) {
         const key = `${m[1]}:${i + 1}`;
         if (!seen.has(key)) {
@@ -86,6 +90,7 @@ export function graphIndex(args) {
   if (!existsSync(project_path)) throw new Error(`graph_index: project_path does not exist: "${project_path}"`);
 
   const db = getDb(project_path);
+  try {
   db.exec('DELETE FROM symbols');
 
   const files = [];
@@ -101,8 +106,10 @@ export function graphIndex(args) {
     const syms = extractSymbols(f);
     if (syms.length) { insertMany(syms); totalSymbols += syms.length; }
   }
-  db.close();
   return { symbols: totalSymbols, files: files.length };
+  } finally {
+    db.close();
+  }
 }
 
 export function graphExplore(args) {
@@ -111,6 +118,7 @@ export function graphExplore(args) {
   if (!existsSync(dbPath)) throw new Error(`graph_explore: index not found for "${project_path}", run graph_index first`);
 
   const db = getDb(project_path);
+  try {
   const q = `%${query}%`;
   let rows;
   if (type === 'all') {
@@ -118,6 +126,8 @@ export function graphExplore(args) {
   } else {
     rows = db.prepare('SELECT name, type, file, line FROM symbols WHERE name LIKE ? AND type = ? ORDER BY name').all(q, type);
   }
-  db.close();
   return { results: rows };
+  } finally {
+    db.close();
+  }
 }

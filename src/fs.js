@@ -1,11 +1,9 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
-import { createRequire } from 'module';
 import ig from 'ignore';
 import { minimatch } from 'minimatch';
-import { readdirSync, statSync, existsSync } from 'fs';
-
-const SKIP_DIRS = new Set(['node_modules', '__pycache__', '.git', 'dist', 'build', '.next', '.nuxt', 'coverage', '.venv', 'venv', 'target', 'out', '.CodersMCP']);
+import { statSync, existsSync } from 'fs';
+import { walkDir } from './walk.js';
 
 function detectLineEnding(buf) {
   for (let i = 0; i < buf.length - 1; i++) {
@@ -31,7 +29,7 @@ export function fsRead(args) {
   } catch (e) {
     throw new Error(`fs_read: cannot read file "${path}": ${e.message}`);
   }
-  const lines = raw.split('\n');
+  const lines = raw.replace(/\r\n/g, '\n').split('\n');
   const total_lines = lines.length;
   const s = start_line != null ? start_line - 1 : 0;
   const e2 = end_line == null ? lines.length : end_line === -1 ? lines.length : end_line;
@@ -117,29 +115,17 @@ function loadGitignore(root) {
   return ig2;
 }
 
-function walkFiles(root, fileGlob, ignorer, results) {
-  let entries;
-  try { entries = readdirSync(root); } catch (_) { return; }
-  for (const entry of entries) {
-    if (SKIP_DIRS.has(entry)) continue;
-    const full = root + '/' + entry;
-    let stat;
-    try { stat = statSync(full); } catch (_) { continue; }
-    const rel = full.replace(/\\/g, '/');
-    if (stat.isDirectory()) {
-      walkFiles(full, fileGlob, ignorer, results);
-    } else if (stat.isFile()) {
-      if (fileGlob && fileGlob !== '*' && !minimatch(entry, fileGlob)) continue;
-      results.push(full);
-    }
-  }
-}
-
 export function fsSearch(args) {
   const { path, pattern, is_regex = false, file_glob = '*' } = args;
-  const ignorer = loadGitignore(path);
+  const root = path.replace(/\\/g, '/');
+  const ignorer = loadGitignore(root);
   const files = [];
-  walkFiles(path.replace(/\\/g, '/'), file_glob, ignorer, files);
+  walkDir(root, (full, entry) => {
+    const rel = full.replace(/\\/g, '/').slice(root.length + 1);
+    if (ignorer.ignores(rel)) return;
+    if (file_glob && file_glob !== '*' && !minimatch(entry, file_glob)) return;
+    files.push(full);
+  });
 
   let regex;
   if (is_regex) {
@@ -148,16 +134,25 @@ export function fsSearch(args) {
     }
   }
 
+  const MAX_FILE_SIZE = 2 * 1024 * 1024;
+  const MAX_MATCHES = 500;
   const matches = [];
   for (const file of files) {
-    let content;
-    try { content = readFileSync(file, 'utf8'); } catch (_) { continue; }
+    if (matches.length >= MAX_MATCHES) break;
+    let stat;
+    try { stat = statSync(file); } catch (_) { continue; }
+    if (stat.size > MAX_FILE_SIZE) continue;
+    let buf;
+    try { buf = readFileSync(file); } catch (_) { continue; }
+    if (buf.includes(0)) continue;
+    const content = buf.toString('utf8');
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
+      if (matches.length >= MAX_MATCHES) break;
       const line = lines[i];
       const hit = is_regex ? regex.test(line) : line.includes(pattern);
       if (hit) matches.push({ file, line: i + 1, text: line });
     }
   }
-  return { matches };
+  return { matches, truncated: matches.length >= MAX_MATCHES };
 }
