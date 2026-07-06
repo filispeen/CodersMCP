@@ -1,0 +1,79 @@
+{
+  "manifest_version": "0.3",
+  "name": "CodersMCP",
+  "version": "1.0.0",
+  "description": "Consolidated file operations, symbol indexing, shell execution, and web fetch for Windows Node.js development",
+  "long_description": "CodersMCP replaces Windows-MCP and Codegraph with a single MCP server. It handles CRLF/LF line ending mismatches, multi-byte encoding, and consolidates file operations, symbol indexing, and shell execution into one process to reduce token overhead.\n\nTools: fs_read, fs_write, fs_replace, fs_search, graph_index, graph_explore, run, web_fetch.",
+  "author": {
+    "name": "filispeen",
+    "url": "https://github.com/filispeen"
+  },
+  "homepage": "https://github.com/filispeen/CodersMCP",
+  "documentation": "https://github.com/filispeen/CodersMCP/blob/main/README.md",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "main.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/main.js"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "fs_read",
+      "description": "Read a file as UTF-8 text with optional line range"
+    },
+    {
+      "name": "fs_write",
+      "description": "Write content to a file. Preserves the existing file line endings by default (CRLF/LF), or override via line_endings"
+    },
+    {
+      "name": "fs_replace",
+      "description": "Replace first (and only) occurrence of old_str with new_str. Normalizes old_str/new_str line endings to match the file, preserves file line endings on write."
+    },
+    {
+      "name": "fs_search",
+      "description": "Recursively search files for a pattern string or regex. Skips files over 2MB and binary files, caps results at 500 matches"
+    },
+    {
+      "name": "graph_index",
+      "description": "Index a project directory for symbol and function lookup"
+    },
+    {
+      "name": "graph_explore",
+      "description": "Query the symbol index with fuzzy name search"
+    },
+    {
+      "name": "run",
+      "description": "Execute a shell command with timeout (PowerShell on Windows, /bin/sh elsewhere)"
+    },
+    {
+      "name": "web_fetch",
+      "description": "Fetch a static HTML/documentation page and return its content as Markdown. Does not execute JavaScript (no SPA support)."
+    }
+  ],
+  "compatibility": {
+    "platforms": [
+      "win32"
+    ],
+    "runtimes": {
+      "node": ">=18"
+    }
+  },
+  "keywords": [
+    "windows",
+    "filesystem",
+    "shell",
+    "symbol-index",
+    "mcp"
+  ],
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/filispeen/CodersMCP"
+  }
+}
