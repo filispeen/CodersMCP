@@ -16,5 +16,8 @@
         "ignore": "^7.0.5",
         "minimatch": "^10.2.5",
         "turndown": "^7.2.4"
+    },
+    "optionalDependencies": {
+        "mcp-proxy": "^5.6.1"
     }
 }

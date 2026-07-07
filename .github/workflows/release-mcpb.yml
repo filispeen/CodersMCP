@@ -21,7 +21,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install production dependencies
-        run: npm install --omit=dev
+        run: npm install --omit=dev --omit=optional
 
       - name: Install mcpb CLI
         run: npm install -g @anthropic-ai/mcpb
