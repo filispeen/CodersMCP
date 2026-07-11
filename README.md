@@ -17,7 +17,24 @@ Runs alongside a `codegraph` MCP server, both registered in `claude_desktop_conf
 
 ## Installation
 
-Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json` or `%appdata%\..\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`):
+### Option 1: Install as a Claude Desktop Extension (.mcpb)
+
+1. Download the latest `.mcpb` file from [Releases](https://github.com/filispeen/CodersMCP/releases).
+2. Open Claude Desktop, go to Settings -> Extensions.
+3. Drag and drop the `.mcpb` file into the window, or use "Install Extension" and pick the file.
+4. Claude Desktop installs and registers CodersMCP automatically, no manual config editing needed.
+
+New `.mcpb` builds are published automatically via GitHub Actions on every `v*.*.*` tag.
+
+### Option 2: Clone the repository
+
+```bash
+git clone https://github.com/filispeen/CodersMCP.git
+cd CodersMCP
+npm install
+```
+
+Then add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json` or `%appdata%\..\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`):
 
 ```json
 {
@@ -31,7 +48,7 @@ Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_c
 }
 ```
 
-Use forward slashes in `args`, even on Windows.
+Use forward slashes in `args`, even on Windows. Update the path to match where you cloned the repo.
 
 
 ## Project Instructions (Claude Projects)
