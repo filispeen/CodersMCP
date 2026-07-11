@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, statSync, writeFileSync } from 'fs';
 import { readFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
@@ -106,10 +106,31 @@ export function graphIndex(args) {
     const syms = extractSymbols(f);
     if (syms.length) { insertMany(syms); totalSymbols += syms.length; }
   }
+
+  const stampPath = path.join(project_path, '.CodersMCP', 'index.stamp');
+  try { writeFileSync(stampPath, String(Date.now())); } catch (_) {}
+
   return { symbols: totalSymbols, files: files.length };
   } finally {
     db.close();
   }
+}
+
+function isIndexStale(project_path) {
+  const stampPath = path.join(project_path, '.CodersMCP', 'index.stamp');
+  let indexedAt;
+  try { indexedAt = Number(readFileSync(stampPath, 'utf8')); } catch (_) { return true; }
+  if (!indexedAt) return true;
+
+  let stale = false;
+  const files = [];
+  walkSrc(project_path, files);
+  for (const f of files) {
+    let stat;
+    try { stat = statSync(f); } catch (_) { continue; }
+    if (stat.mtimeMs > indexedAt) { stale = true; break; }
+  }
+  return stale;
 }
 
 export function graphExplore(args) {
@@ -126,7 +147,7 @@ export function graphExplore(args) {
   } else {
     rows = db.prepare('SELECT name, type, file, line FROM symbols WHERE name LIKE ? AND type = ? ORDER BY name').all(q, type);
   }
-  return { results: rows };
+  return { results: rows, stale: isIndexStale(project_path) };
   } finally {
     db.close();
   }
