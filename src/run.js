@@ -1,5 +1,6 @@
 import { spawn, execSync } from 'child_process';
 import { platform } from 'os';
+import { listWslDistros, requireSingleDistro, toWslPath } from './wsl.js';
 
 const IS_WIN = platform() === 'win32';
 const MAX_TIMEOUT = 120;
@@ -33,14 +34,34 @@ function freshWindowsPathExt() {
   return DEFAULT_PATHEXT;
 }
 
+export { listWslDistros };
+
 export function run(args) {
-  const { command, cwd, timeout = 30 } = args;
+  const { command, cwd, timeout = 30, use_wsl = false, distro } = args;
   const effectiveTimeout = Math.min(timeout, MAX_TIMEOUT) * 1000;
+
+  let resolvedDistro = distro;
+  if (use_wsl && IS_WIN) {
+    const check = requireSingleDistro(distro);
+    if (!check.ok) {
+      return Promise.resolve({ exit_code: -1, stdout: '', stderr: `run: ${check.error}` });
+    }
+    resolvedDistro = check.distro;
+  }
+
 
   return new Promise((resolve) => {
     let shell, shellArgs;
     const env = { ...process.env };
-    if (IS_WIN) {
+    if (use_wsl && IS_WIN) {
+      shell = 'wsl.exe';
+      const distroArgs = ['-d', resolvedDistro];
+      const wslCwd = cwd ? toWslPath(cwd, resolvedDistro) : null;
+      const inner = wslCwd
+        ? `cd ${JSON.stringify(wslCwd)} && ${command}`
+        : command;
+      shellArgs = [...distroArgs, '--', 'bash', '-lc', inner];
+    } else if (IS_WIN) {
       shell = 'powershell.exe';
       env.PATH = freshWindowsPath();
       env.PATHEXT = freshWindowsPathExt();
@@ -52,7 +73,7 @@ export function run(args) {
     }
 
     const child = spawn(shell, shellArgs, {
-      cwd: cwd || undefined,
+      cwd: use_wsl ? undefined : (cwd || undefined),
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
       env,

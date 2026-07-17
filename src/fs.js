@@ -4,6 +4,15 @@ import ig from 'ignore';
 import { minimatch } from 'minimatch';
 import { statSync, existsSync } from 'fs';
 import { walkDir } from './walk.js';
+import { requireSingleDistro, resolveWslFsPath } from './wsl.js';
+
+function resolvePath(inputPath, use_wsl, distro) {
+  if (!use_wsl) return { ok: true, path: inputPath };
+  const check = requireSingleDistro(distro);
+  if (!check.ok) return { ok: false, error: check.error };
+  return { ok: true, path: resolveWslFsPath(inputPath, check.distro) };
+}
+
 
 function detectLineEnding(buf) {
   for (let i = 0; i < buf.length - 1; i++) {
@@ -22,10 +31,13 @@ function applyLineEnding(str, ending) {
 }
 
 export function fsRead(args) {
-  const { path, start_line, end_line } = args;
+  const { path, start_line, end_line, use_wsl = false, distro } = args;
+  const resolved = resolvePath(path, use_wsl, distro);
+  if (!resolved.ok) throw new Error(`fs_read: ${resolved.error}`);
+  const resolvedPath = resolved.path;
   let raw;
   try {
-    raw = readFileSync(path, 'utf8');
+    raw = readFileSync(resolvedPath, 'utf8');
   } catch (e) {
     throw new Error(`fs_read: cannot read file "${path}": ${e.message}`);
   }
@@ -38,15 +50,18 @@ export function fsRead(args) {
 }
 
 export function fsWrite(args) {
-  const { path, content, line_endings = 'preserve' } = args;
+  const { path, content, line_endings = 'preserve', use_wsl = false, distro } = args;
+  const resolved = resolvePath(path, use_wsl, distro);
+  if (!resolved.ok) throw new Error(`fs_write: ${resolved.error}`);
+  const resolvedPath = resolved.path;
   try {
-    mkdirSync(dirname(path), { recursive: true });
+    mkdirSync(dirname(resolvedPath), { recursive: true });
   } catch (_) {}
 
   let ending;
   if (line_endings === 'preserve') {
     try {
-      const existing = readFileSync(path);
+      const existing = readFileSync(resolvedPath);
       ending = detectLineEnding(existing);
     } catch (_) {
       ending = 'lf';
@@ -58,7 +73,7 @@ export function fsWrite(args) {
   const normalized = applyLineEnding(content, ending);
   const buf = Buffer.from(normalized, 'utf8');
   try {
-    writeFileSync(path, buf);
+    writeFileSync(resolvedPath, buf);
   } catch (e) {
     throw new Error(`fs_write: cannot write file "${path}": ${e.message}`);
   }
@@ -66,10 +81,13 @@ export function fsWrite(args) {
 }
 
 export function fsReplace(args) {
-  const { path, old_str, new_str } = args;
+  const { path, old_str, new_str, use_wsl = false, distro } = args;
+  const resolved = resolvePath(path, use_wsl, distro);
+  if (!resolved.ok) throw new Error(`fs_replace: ${resolved.error}`);
+  const resolvedPath = resolved.path;
   let buf;
   try {
-    buf = readFileSync(path);
+    buf = readFileSync(resolvedPath);
   } catch (e) {
     throw new Error(`fs_replace: cannot read file "${path}": ${e.message}`);
   }
@@ -97,7 +115,7 @@ export function fsReplace(args) {
 
   const result = Buffer.concat([buf.slice(0, firstIdx), newBuf, buf.slice(firstIdx + oldBuf.length)]);
   try {
-    writeFileSync(path, result);
+    writeFileSync(resolvedPath, result);
   } catch (e) {
     throw new Error(`fs_replace: cannot write file "${path}": ${e.message}`);
   }
@@ -116,8 +134,10 @@ function loadGitignore(root) {
 }
 
 export function fsSearch(args) {
-  const { path, pattern, is_regex = false, file_glob = '*' } = args;
-  const root = path.replace(/\\/g, '/');
+  const { path, pattern, is_regex = false, file_glob = '*', use_wsl = false, distro } = args;
+  const resolved = resolvePath(path, use_wsl, distro);
+  if (!resolved.ok) throw new Error(`fs_search: ${resolved.error}`);
+  const root = resolved.path.replace(/\\/g, '/');
   const ignorer = loadGitignore(root);
   const files = [];
   walkDir(root, (full, entry) => {

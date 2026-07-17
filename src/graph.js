@@ -3,9 +3,18 @@ import { readFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 import { walkDir } from './walk.js';
+import { requireSingleDistro, resolveWslFsPath } from './wsl.js';
 
 const require = createRequire(import.meta.url);
 const Database = require('better-sqlite3');
+
+function resolveProjectPath(inputPath, use_wsl, distro) {
+  if (!use_wsl) return { ok: true, path: inputPath };
+  const check = requireSingleDistro(distro);
+  if (!check.ok) return { ok: false, error: check.error };
+  return { ok: true, path: resolveWslFsPath(inputPath, check.distro) };
+}
+
 
 const SOURCE_EXTS = new Set(['.js', '.ts', '.jsx', '.tsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.java', '.cs', '.cpp', '.c', '.h', '.hpp', '.rb', '.php', '.swift', '.kt', '.scala', '.lua', '.ex', '.exs', '.hs', '.clj', '.ml', '.fs', '.fsx']);
 
@@ -86,15 +95,18 @@ function extractSymbols(filePath) {
 }
 
 export function graphIndex(args) {
-  const { project_path } = args;
-  if (!existsSync(project_path)) throw new Error(`graph_index: project_path does not exist: "${project_path}"`);
+  const { project_path, use_wsl = false, distro } = args;
+  const resolved = resolveProjectPath(project_path, use_wsl, distro);
+  if (!resolved.ok) throw new Error(`graph_index: ${resolved.error}`);
+  const resolvedPath = resolved.path;
+  if (!existsSync(resolvedPath)) throw new Error(`graph_index: project_path does not exist: "${project_path}"`);
 
-  const db = getDb(project_path);
+  const db = getDb(resolvedPath);
   try {
   db.exec('DELETE FROM symbols');
 
   const files = [];
-  walkSrc(project_path, files);
+  walkSrc(resolvedPath, files);
 
   const insert = db.prepare('INSERT INTO symbols (name, type, file, line) VALUES (?, ?, ?, ?)');
   const insertMany = db.transaction((syms) => {
@@ -107,7 +119,7 @@ export function graphIndex(args) {
     if (syms.length) { insertMany(syms); totalSymbols += syms.length; }
   }
 
-  const stampPath = path.join(project_path, '.CodersMCP', 'index.stamp');
+  const stampPath = path.join(resolvedPath, '.CodersMCP', 'index.stamp');
   try { writeFileSync(stampPath, String(Date.now())); } catch (_) {}
 
   return { symbols: totalSymbols, files: files.length };
@@ -134,11 +146,14 @@ function isIndexStale(project_path) {
 }
 
 export function graphExplore(args) {
-  const { project_path, query, type = 'all' } = args;
-  const dbPath = path.join(project_path, '.CodersMCP', 'index.db');
+  const { project_path, query, type = 'all', use_wsl = false, distro } = args;
+  const resolved = resolveProjectPath(project_path, use_wsl, distro);
+  if (!resolved.ok) throw new Error(`graph_explore: ${resolved.error}`);
+  const resolvedPath = resolved.path;
+  const dbPath = path.join(resolvedPath, '.CodersMCP', 'index.db');
   if (!existsSync(dbPath)) throw new Error(`graph_explore: index not found for "${project_path}", run graph_index first`);
 
-  const db = getDb(project_path);
+  const db = getDb(resolvedPath);
   try {
   const q = `%${query}%`;
   let rows;
@@ -147,7 +162,7 @@ export function graphExplore(args) {
   } else {
     rows = db.prepare('SELECT name, type, file, line FROM symbols WHERE name LIKE ? AND type = ? ORDER BY name').all(q, type);
   }
-  return { results: rows, stale: isIndexStale(project_path) };
+  return { results: rows, stale: isIndexStale(resolvedPath) };
   } finally {
     db.close();
   }
