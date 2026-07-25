@@ -19,5 +19,8 @@
     },
     "optionalDependencies": {
         "mcp-proxy": "^5.6.1"
-    }
+    },
+    "trustedDependencies": [
+        "better-sqlite3"
+    ]
 }

@@ -6,7 +6,9 @@ import { walkDir } from './walk.js';
 import { requireSingleDistro, resolveWslFsPath } from './wsl.js';
 
 const require = createRequire(import.meta.url);
-const Database = require('better-sqlite3');
+const Database = typeof Bun !== 'undefined'
+  ? (await import('bun:sqlite')).Database
+  : require('better-sqlite3');
 
 function resolveProjectPath(inputPath, use_wsl, distro) {
   if (!use_wsl) return { ok: true, path: inputPath };
