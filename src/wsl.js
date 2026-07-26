@@ -41,6 +41,40 @@ export function toWslPath(winPath, distro) {
   }
 }
 
+export function wslReadFileBuffer(linuxPath, distro) {
+  const distroArgs = distro ? ['-d', distro] : [];
+  const escaped = linuxPath.replace(/'/g, `'\\''`);
+  const out = execSync(
+    `wsl.exe ${distroArgs.join(' ')} -- base64 -w0 '${escaped}'`,
+    { encoding: 'utf8', maxBuffer: 1024 * 1024 * 200 }
+  ).trim();
+  return Buffer.from(out, 'base64');
+}
+
+export function wslWriteFileBuffer(linuxPath, buf, distro) {
+  const distroArgs = distro ? ['-d', distro] : [];
+  const dir = linuxPath.slice(0, linuxPath.lastIndexOf('/')) || '/';
+  const escapedDir = dir.replace(/'/g, `'\\''`);
+  const escapedPath = linuxPath.replace(/'/g, `'\\''`);
+  execSync(`wsl.exe ${distroArgs.join(' ')} -- mkdir -p '${escapedDir}'`, { encoding: 'utf8' });
+  const b64 = buf.toString('base64');
+  execSync(
+    `wsl.exe ${distroArgs.join(' ')} -- bash -lc "base64 -d > '${escapedPath}'"`,
+    { input: b64, encoding: 'utf8', maxBuffer: 1024 * 1024 * 200 }
+  );
+}
+
+export function wslFileExists(linuxPath, distro) {
+  const distroArgs = distro ? ['-d', distro] : [];
+  const escaped = linuxPath.replace(/'/g, `'\\''`);
+  try {
+    execSync(`wsl.exe ${distroArgs.join(' ')} -- test -f '${escaped}'`, { encoding: 'utf8' });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function isAlreadyUncOrWindows(p) {
   return /^[a-zA-Z]:\\/.test(p) || p.startsWith('\\\\');
 }

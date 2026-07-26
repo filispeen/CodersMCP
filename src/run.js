@@ -65,7 +65,7 @@ export function run(args) {
       shell = 'powershell.exe';
       env.PATH = freshWindowsPath();
       env.PATHEXT = freshWindowsPathExt();
-      const wrapped = `$OutputEncoding = [Console]::OutputEncoding = [Text.Encoding]::UTF8; & { ${command} } 2>&1 | Out-String -Width 512`;
+      const wrapped = `[Console]::OutputEncoding = [Text.Encoding]::UTF8; if ("${command.replace(/"/g, '\\"')}" -match "^\\s*wsl(\\.exe)?\\s") { $OutputEncoding = [Text.Encoding]::Unicode } else { $OutputEncoding = [Text.Encoding]::UTF8 }; & { ${command} } 2>&1 | Out-String -Width 512`;
       shellArgs = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', wrapped];
     } else {
       shell = '/bin/sh';
